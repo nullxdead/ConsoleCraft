@@ -24,6 +24,7 @@ from uuid import UUID
 import requests
 
 from .config import DEFAULT_CLIENT_ID
+from .auth_page import render_auth_page
 from . import __version__
 
 
@@ -338,7 +339,8 @@ class AuthManager:
         verifier = secrets.token_urlsafe(64)
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode("ascii")).digest()).rstrip(b"=").decode("ascii")
         state = secrets.token_urlsafe(32)
-        result: dict[str, str] = {}
+        result: dict[str, Any] = {}
+        manager = self
 
         class Callback(BaseHTTPRequestHandler):
             def log_message(self, format, *args):
@@ -360,21 +362,34 @@ class AuthManager:
                     return
                 codes, errors = values.get("code", []), values.get("error", [])
                 if len(codes) == 1 and codes[0] and not errors:
-                    result["code"] = codes[0]
-                    message = "Вход получен. Вернитесь в ConsoleLauncher."
+                    try:
+                        token = manager._request("POST", _OAUTH_BASE + "/token", data={
+                            "client_id": manager.client_id, "grant_type": "authorization_code", "code": codes[0],
+                            "redirect_uri": redirect, "code_verifier": verifier, "scope": _SCOPE,
+                        })
+                        result["account"] = manager._finish(token)
+                    except AuthError as exc:
+                        result["failure"] = exc
+                    except Exception:
+                        result["failure"] = AuthError("Не удалось завершить вход. Повторите попытку.")
                 elif len(errors) == 1 and errors[0] and not codes:
-                    result["error"] = "cancelled"
-                    message = "Вход не завершён. Вернитесь в ConsoleLauncher."
+                    result["failure"] = AuthError("Microsoft-вход отменён или отклонён. Повторите вход.")
                 else:
                     self.send_error(400)
                     return
-                body = message.encode("utf-8")
+                body = render_auth_page("account" in result)
                 self.send_response(200)
-                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Cache-Control", "no-store")
+                self.send_header("Referrer-Policy", "no-referrer")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'")
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
-                self.wfile.write(body)
+                try:
+                    self.wfile.write(body)
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
 
         try:
             with HTTPServer(("127.0.0.1", 0), Callback) as server:
@@ -398,15 +413,11 @@ class AuthManager:
                     server.handle_request()
         except OSError:
             raise AuthError("Не удалось открыть локальный адрес для Microsoft-входа.") from None
-        if result.get("error"):
-            raise AuthError("Microsoft-вход отменён или отклонён. Повторите вход.")
-        if "code" not in result:
+        if "failure" in result:
+            raise result["failure"]
+        if "account" not in result:
             raise AuthError("Время ожидания Microsoft-входа истекло. Запустите вход ещё раз.")
-        token = self._request("POST", _OAUTH_BASE + "/token", data={
-            "client_id": self.client_id, "grant_type": "authorization_code", "code": result["code"],
-            "redirect_uri": redirect, "code_verifier": verifier, "scope": _SCOPE,
-        })
-        return self._finish(token)
+        return result["account"]
 
     def refresh(self) -> Account:
         self._require_client()

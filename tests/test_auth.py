@@ -251,6 +251,8 @@ class AuthManagerTests(unittest.TestCase):
                 observed["wrong"] = wrong.status_code
                 accepted = requests.get(callback, params={"code": "synthetic-code", "state": query["state"][0]}, timeout=3)
                 observed["accepted"] = accepted.status_code
+                observed["body"] = accepted.text
+                observed["headers"] = accepted.headers
             thread = threading.Thread(target=visit)
             threads.append(thread)
             thread.start()
@@ -261,12 +263,38 @@ class AuthManagerTests(unittest.TestCase):
             thread.join(timeout=3)
         self.assertEqual(account.username, "Tester")
         self.assertEqual((observed["wrong"], observed["accepted"]), (400, 200))
+        self.assertIn('Вы вошли в аккаунт', observed['body'])
+        self.assertIn('Можете закрыть эту страницу', observed['body'])
+        self.assertNotIn('synthetic-code', observed['body'])
+        self.assertIn("default-src 'none'", observed['headers']['Content-Security-Policy'])
         token_call = next(c for c in self.manager._http.request.call_args_list if c.args[1].endswith('/token'))
         data = token_call.kwargs['data']
         digest = base64.urlsafe_b64encode(hashlib.sha256(data['code_verifier'].encode('ascii')).digest()).rstrip(b'=').decode('ascii')
         self.assertEqual(digest, observed['query']['code_challenge'][0])
         self.assertEqual(data['grant_type'], 'authorization_code')
         self.assertEqual(data['code'], 'synthetic-code')
+
+    def test_failed_minecraft_auth_does_not_show_success_page(self):
+        self.entitlements = []
+        observed = {}
+        threads = []
+        def open_browser(url):
+            query = parse_qs(urlparse(url).query)
+            callback = query['redirect_uri'][0].replace('localhost', '127.0.0.1')
+            def visit():
+                page = requests.get(callback, params={'code': 'synthetic-code', 'state': query['state'][0]}, timeout=3)
+                observed['body'] = page.text
+            thread = threading.Thread(target=visit)
+            threads.append(thread)
+            thread.start()
+            return True
+        with patch.object(self.manager, '_redirect_registration_rejected', return_value=False), \
+                patch('consolecraft.auth.webbrowser.open', side_effect=open_browser), self.assertRaises(NoEntitlementError):
+            self.manager.login_browser(timeout=5)
+        for thread in threads:
+            thread.join(timeout=3)
+        self.assertIn('Не удалось войти', observed['body'])
+        self.assertNotIn('Вы вошли в аккаунт', observed['body'])
 
     def test_microsoft_redirect_mismatch_is_reported_without_waiting(self):
         redirect = Mock(status_code=302, headers={"Location": "https://login.live.com/authorize"})

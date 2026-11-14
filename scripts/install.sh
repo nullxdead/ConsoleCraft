@@ -1,7 +1,7 @@
 #!/bin/sh
 # Download a verified native build and install it for the current user.
 set -eu
-version=4.4.1
+version=4.4.2
 case "$(uname -s):$(uname -m)" in
     Linux:x86_64) asset="ConsoleLauncher-$version-Linux-x86_64.zip" ;;
     Darwin:arm64) asset="ConsoleLauncher-$version-Darwin-arm64.zip" ;;

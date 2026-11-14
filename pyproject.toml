@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "console-launcher"
-version = "4.4.1"
+version = "4.4.2"
 description = "Console Launcher — terminal Minecraft Java launcher by 0xdead, Frosty and Qwertyks"
 readme = "README.md"
 requires-python = ">=3.11"
