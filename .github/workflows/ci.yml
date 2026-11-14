@@ -1,0 +1,71 @@
+name: Verify Console Launcher
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ['3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: python -m pip install -e ".[build]"
+      - name: Terminal menu checks
+        env:
+          PYTHONUTF8: 1
+        run: python -m unittest discover -s tests -p "test_terminal_menu.py" -v
+      - name: Cancellation checks
+        run: python -m unittest discover -s tests -p "test_cancellation.py" -v
+      - name: Catalogue and Discord checks
+        run: |
+          python -m unittest discover -s tests -p "test_catalog.py" -v
+          python -m unittest discover -s tests -p "test_discord_rpc.py" -v
+      - name: Authentication and settings checks
+        run: |
+          python -m unittest discover -s tests -p "test_auth.py" -v
+          python -m unittest discover -s tests -p "test_config.py" -v
+      - name: Check Unix installer syntax
+        if: runner.os != 'Windows'
+        run: sh -n scripts/install.sh scripts/install-cli.sh start.sh
+      - name: CLI smoke test
+        run: python -m consolecraft about
+      - name: Build distributable package
+        run: python -m build
+  native:
+    name: Native / ${{ matrix.os }}
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install build dependencies
+        run: python -m pip install -e ".[build,bundle]"
+      - name: Build and test native binary
+        run: python scripts/build_binary.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: consolelauncher-native-${{ matrix.os }}
+          path: dist/ConsoleLauncher-4.4.0-*.zip
+          if-no-files-found: error
+

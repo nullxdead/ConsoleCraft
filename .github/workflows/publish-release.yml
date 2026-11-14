@@ -1,0 +1,73 @@
+name: Publish verified release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag
+        required: true
+      run_id:
+        description: Successful native build run
+        required: true
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.tag }}
+      ARTIFACT_RUN_ID: ${{ inputs.run_id }}
+    steps:
+      - name: Verify tag and build
+        shell: bash
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$ARTIFACT_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" == true ]]
+          gh api "repos/$GH_REPO/actions/runs/$ARTIFACT_RUN_ID" > run.json
+          gh api "repos/$GH_REPO/commits/$RELEASE_TAG" --jq .sha > tag-sha.txt
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          run = json.loads(Path('run.json').read_text())
+          assert run['conclusion'] == 'success', 'Build did not succeed'
+          assert run['head_sha'] == Path('tag-sha.txt').read_text().strip(), 'Tag and build differ'
+          PY
+      - name: Collect distributions and checksums
+        shell: bash
+        run: |
+          gh run download "$ARTIFACT_RUN_ID" --dir native
+          gh release download "$RELEASE_TAG" --dir packages --pattern '*source.zip' --pattern '*.whl' --pattern '*.tar.gz'
+          python - <<'PY'
+          import hashlib, os, shutil
+          from pathlib import Path
+          version = os.environ['RELEASE_TAG'][1:]
+          output = Path('packages')
+          natives = list(Path('native').rglob('*.zip'))
+          expected = {f'ConsoleLauncher-{version}-{platform}.zip' for platform in ('Windows-AMD64', 'Linux-x86_64', 'Darwin-arm64')}
+          assert {p.name for p in natives} == expected, 'Native packages missing'
+          for source in natives:
+              shutil.copyfile(source, output / source.name)
+          distributions = sorted(output.iterdir())
+          assert len(distributions) == 6, 'Expected six distributions'
+          with (output / 'SHA256SUMS.txt').open('w', encoding='utf-8', newline='\n') as handle:
+              for path in distributions:
+                  with path.open('rb') as package:
+                      checksum = hashlib.file_digest(package, 'sha256').hexdigest()
+                  handle.write(f'{checksum}  {path.name}\n')
+          PY
+      - name: Upload and publish
+        shell: bash
+        run: |
+          for package in native/*/*.zip; do
+            gh release upload "$RELEASE_TAG" "$package" --clobber
+          done
+          gh release upload "$RELEASE_TAG" packages/SHA256SUMS.txt --clobber
+          gh release view "$RELEASE_TAG" --json assets --jq '.assets | length' | grep -x 7
+          gh release edit "$RELEASE_TAG" --draft=false --latest

@@ -1,0 +1,25 @@
+Console Launcher — source-available license
+
+Copyright (c) 2026 Console Launcher contributors.
+Creators: 0xdead, Frosty, Qwertyks.
+
+The copyright holder grants permission to run the officially distributed
+launcher and to view its source code for reference.
+Except as stated below or separately authorized in writing, no permission is
+granted to modify, redistribute, publish, sell, or create derivative works
+from the portions first introduced after version 4.1.0.
+
+This notice does not revoke or restrict any rights already granted under the
+MIT License for version 4.1.0 and earlier versions. Their original license is
+included in LICENSE-MIT-4.1.0. Separate terms for third-party components remain
+in effect. This notice is also subject to the rights granted by GitHub's
+Terms of Service for public repositories, including viewing and forking on
+GitHub. It does not disable GitHub's fork feature.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

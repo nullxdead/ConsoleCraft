@@ -1,0 +1,3 @@
+# Install the editable project and its dependencies declared in pyproject.toml.
+-e .
+
