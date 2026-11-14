@@ -2,7 +2,7 @@
 
 Терминальный лаунчер Minecraft Java Edition для Windows, macOS и Linux. **Creators: 0xdead, Frosty, Qwertyks**
 
-[Релизы](https://github.com/nullxdead/ConsoleLauncher/releases) · [Discord](https://discord.gg/FtqBFt58w) · [Telegram](https://t.me/CCLauncher)
+[Релизы](https://github.com/nullxdead/ConsoleLauncher/releases) · [Discord](https://discord.gg/FtqBFt58w) · [Telegram](https://t.me/CCLauncher) · [Поддержать проект](https://send.monobank.ua/jar/8i3XAaYU7L)
 
 ## Быстрая установка
 
@@ -55,6 +55,10 @@ curl -fsSL https://raw.githubusercontent.com/nullxdead/ConsoleLauncher/v4.4.1/sc
 Нужен Python 3.11+. Выполните `python -m pip install -e .` из папки проекта; затем запустите `consolelauncher`. Также доступны `start.bat` и `sh start.sh`, которые создают виртуальное окружение и устанавливают зависимости автоматически.
 
 Сохранены Microsoft OAuth, офлайн-аккаунты, поддержка скинов Ely.by, Fabric, Forge, NeoForge, Quilt, Modrinth, профили, серверы, Java и настройки памяти. Игровые файлы и существующий каталог данных ConsoleCraft не перемещаются. Сборки не подписаны сертификатом разработчика.
+
+## Поддержать развитие
+
+Если вам нравится ConsoleLauncher и вы хотите помочь его развитию, вы можете [поддержать проект через банку monobank](https://send.monobank.ua/jar/8i3XAaYU7L). Спасибо за поддержку! 💜
 
 ## Лицензия
 
