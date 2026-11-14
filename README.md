@@ -1,4 +1,4 @@
-# ConsoleLauncher 4.4.0
+# ConsoleLauncher 4.4.1
 
 Терминальный лаунчер Minecraft Java Edition для Windows, macOS и Linux. **Creators: 0xdead, Frosty, Qwertyks**
 
@@ -9,13 +9,13 @@
 Windows (PowerShell):
 
 ```powershell
-irm https://raw.githubusercontent.com/nullxdead/ConsoleLauncher/v4.4.0/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/nullxdead/ConsoleLauncher/v4.4.1/scripts/install.ps1 | iex
 ```
 
 macOS Apple Silicon и Linux x86_64:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/nullxdead/ConsoleLauncher/v4.4.0/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/nullxdead/ConsoleLauncher/v4.4.1/scripts/install.sh | sh
 ```
 
 Установщик скачивает готовую сборку, проверяет SHA-256 и устанавливает команду в пользовательский каталог. Потребуются интернет, а на macOS/Linux — `curl`, `unzip` и `shasum` или `sha256sum`. На других архитектурах используйте исходники и Python 3.11+. После установки откройте новый терминал и запустите:
@@ -32,18 +32,20 @@ consolelauncher
 
 Вход Microsoft открывает системный браузер и возвращает вас в лаунчер после подтверждения. При первой настройке потребуется идентификатор зарегистрированного приложения; для него должны быть разрешены личные аккаунты Microsoft и адрес возврата `http://localhost`. Подробнее: [вход Microsoft](docs/microsoft-auth.md).
 
+Если Microsoft сообщает `invalid_request` для `redirect_uri`, владелец приложения должен добавить `http://localhost` в Microsoft Entra → App registrations → Authentication → Mobile and desktop applications и разрешить public client flows. Если автоматический возврат недоступен, запасной вариант: `consolelauncher login --device-code`.
+
 Discord Rich Presence работает для всех профилей, когда открыт настольный Discord и настроен идентификатор приложения через «Настройки» → «Discord Rich Presence: Application ID». Он показывает лаунчер или версию Minecraft, но не имя аккаунта или адрес сервера. Пустое значение отключает статус.
 
 Для удаления в macOS/Linux:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/nullxdead/ConsoleLauncher/v4.4.0/scripts/install-cli.sh | sh -s -- --uninstall
+curl -fsSL https://raw.githubusercontent.com/nullxdead/ConsoleLauncher/v4.4.1/scripts/install-cli.sh | sh -s -- --uninstall
 ```
 
 Для удаления в Windows PowerShell:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/nullxdead/ConsoleLauncher/v4.4.0/scripts/install-cli.ps1))) -Uninstall
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/nullxdead/ConsoleLauncher/v4.4.1/scripts/install-cli.ps1))) -Uninstall
 ```
 
 При удалении команды настройки, аккаунты, профили, моды и игровые миры сохраняются. Если имя команды занято другой программой, установщик не будет её перезаписывать.

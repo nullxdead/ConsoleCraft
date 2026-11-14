@@ -2,6 +2,8 @@
 
 The application identifier must be configured locally. Select Microsoft sign-in and enter the identifier privately when prompted. The launcher opens Microsoft's sign-in page in the system browser and receives the authorization response on the local computer using the authorization code flow with PKCE. The launcher never asks for a Microsoft password. The application registration must allow personal Microsoft accounts, public clients and the `http://localhost` redirect URI. `consolelauncher login --device-code` remains an alternative when loopback browser sign-in is unavailable.
 
+If Microsoft rejects `redirect_uri`, the owner of the registered application must add `http://localhost` under Authentication → Mobile and desktop applications and enable public client flows. When Microsoft's response clearly indicates this specific mismatch, the launcher reports the problem before opening the browser; if the check is unavailable, normal browser sign-in remains available.
+
 After approval, Console Launcher exchanges the Microsoft access token through Xbox Live and XSTS, obtains a Minecraft Services token, checks the Java entitlement (`game_minecraft` or `product_minecraft`) and retrieves the official Java profile's UUID and player name. A qualifying Game Pass entitlement is accepted through the same service checks; no purchase or license check is bypassed. An absent Java entitlement or profile produces a separate license/profile error.
 
 Minecraft Services API approval may be required for the configured application. A server-side refusal is reported explicitly, without substituting a different application ID, offline identity or third-party authentication. `CONSOLECRAFT_CLIENT_ID` remains an environment override.

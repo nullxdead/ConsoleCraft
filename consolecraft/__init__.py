@@ -1,6 +1,6 @@
 """Console Launcher — a terminal launcher for Minecraft Java."""
 
-__version__ = "4.4.0"
+__version__ = "4.4.1"
 APP_NAME = "Console Launcher"
 CEO = "0xdead"
 CREDIT = "Creators: 0xdead, Frosty, Qwertyks"

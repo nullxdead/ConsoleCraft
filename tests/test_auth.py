@@ -255,7 +255,7 @@ class AuthManagerTests(unittest.TestCase):
             threads.append(thread)
             thread.start()
             return True
-        with patch("consolecraft.auth.webbrowser.open", side_effect=open_browser):
+        with patch.object(self.manager, "_redirect_registration_rejected", return_value=False), patch("consolecraft.auth.webbrowser.open", side_effect=open_browser):
             account = self.manager.login_browser(timeout=5)
         for thread in threads:
             thread.join(timeout=3)
@@ -267,6 +267,26 @@ class AuthManagerTests(unittest.TestCase):
         self.assertEqual(digest, observed['query']['code_challenge'][0])
         self.assertEqual(data['grant_type'], 'authorization_code')
         self.assertEqual(data['code'], 'synthetic-code')
+
+    def test_microsoft_redirect_mismatch_is_reported_without_waiting(self):
+        redirect = Mock(status_code=302, headers={"Location": "https://login.live.com/authorize"})
+        error = Mock(status_code=200, headers={})
+        error.iter_content.return_value = [b'<span id="errorCode">invalid_request: </span><span id="errorDescription">Bad redirect_uri</span>']
+        with patch('consolecraft.auth.requests.get', side_effect=[redirect, error]), \
+                patch('consolecraft.auth.webbrowser.open') as browser:
+            with self.assertRaisesRegex(AuthError, 'http://localhost'):
+                self.manager.login_browser(timeout=5)
+        browser.assert_not_called()
+        self.manager._http.request.assert_not_called()
+        redirect.close.assert_called_once()
+        error.close.assert_called_once()
+
+    def test_preflight_does_not_follow_untrusted_redirects(self):
+        redirect = Mock(status_code=302, headers={"Location": "https://example.invalid/"})
+        with patch('consolecraft.auth.requests.get', return_value=redirect) as get:
+            self.assertFalse(self.manager._redirect_registration_rejected('https://login.microsoftonline.com/authorize'))
+        self.assertEqual(get.call_count, 1)
+        redirect.close.assert_called_once()
 
     def test_service_failures_have_distinct_types_and_never_echo_response(self):
         cases = [

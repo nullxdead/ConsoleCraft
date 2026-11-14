@@ -18,7 +18,7 @@ import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, Callable
-from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 from uuid import UUID
 
 import requests
@@ -30,6 +30,7 @@ from . import __version__
 _OAUTH_BASE = "https://login.microsoftonline.com/consumers/oauth2/v2.0"
 _SCOPE = "XboxLive.signin offline_access"
 _HTTP_TIMEOUT = (10, 30)
+_MICROSOFT_LOGIN_HOSTS = {"login.microsoftonline.com", "login.live.com"}
 _SECURE_BACKENDS = {
     "keyring.backends.Windows",
     "keyring.backends.macOS",
@@ -292,6 +293,43 @@ class AuthManager:
             return self._finish(token)
         raise AuthError("Время ожидания Microsoft-входа истекло. Запустите login ещё раз.")
 
+    @staticmethod
+    def _redirect_registration_rejected(authorization_url: str) -> bool:
+        """Detect Microsoft's explicit redirect mismatch without logging the URL."""
+        url = authorization_url
+        try:
+            for _ in range(5):
+                parsed = urlparse(url)
+                if (parsed.scheme != "https" or parsed.hostname not in _MICROSOFT_LOGIN_HOSTS
+                        or parsed.username or parsed.password or parsed.port not in (None, 443)):
+                    return False
+                response = requests.get(url, timeout=(3, 5), allow_redirects=False, stream=True)
+                try:
+                    if response.status_code in {301, 302, 303, 307, 308}:
+                        location = response.headers.get("Location")
+                        if not location:
+                            return False
+                        url = urljoin(url, location)
+                        continue
+                    if response.status_code != 200:
+                        return False
+                    body = bytearray()
+                    for chunk in response.iter_content(chunk_size=16384):
+                        body.extend(chunk)
+                        if len(body) > 1024 * 1024:
+                            return False
+                    text = body.decode("utf-8", errors="replace")
+                    if "AADSTS50011" in text:
+                        return True
+                    error_code = re.search(r'<[^>]*\bid\s*=\s*["\']errorCode["\'][^>]*>\s*invalid_request\b', text, re.I)
+                    error_description = re.search(r'<[^>]*\bid\s*=\s*["\']errorDescription["\'][^>]*>[^<]*redirect_uri', text, re.I)
+                    return bool(error_code and error_description)
+                finally:
+                    response.close()
+        except (requests.RequestException, OSError, ValueError):
+            return False
+        return False
+
     def login_browser(self, timeout: int = 300) -> Account:
         """Use Microsoft's system-browser authorization code flow with PKCE."""
         self._require_client()
@@ -347,6 +385,12 @@ class AuthManager:
                     "response_mode": "query", "scope": _SCOPE, "state": state,
                     "code_challenge": challenge, "code_challenge_method": "S256",
                 })
+                if self._redirect_registration_rejected(authorization_url):
+                    raise AuthError(
+                        "Microsoft отклонил адрес возврата. В регистрации приложения Microsoft Entra "
+                        "добавьте http://localhost для мобильных и классических приложений. "
+                        "Альтернативный вход: consolelauncher login --device-code."
+                    )
                 if not webbrowser.open(authorization_url):
                     raise AuthError("Не удалось открыть браузер. Проверьте браузер по умолчанию и повторите вход.")
                 deadline = time.monotonic() + timeout

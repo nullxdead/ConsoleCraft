@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$version = '4.4.0'
+$version = '4.4.1'
 if (-not [Environment]::Is64BitOperatingSystem) { throw 'Нужна 64-битная Windows. Для 32-битной системы используйте исходники.' }
 $asset = "ConsoleLauncher-$version-Windows-AMD64.zip"
 $base = "https://github.com/nullxdead/ConsoleLauncher/releases/download/v$version"
